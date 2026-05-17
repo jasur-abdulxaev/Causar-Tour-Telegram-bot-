@@ -1,0 +1,76 @@
+@page "/analytics"
+@inject ApiService Api
+@inject ISnackbar Snackbar
+
+<PageTitle>Analytics</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Analytics</MudText>
+
+@if (_isLoading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudTable Items="@_analytics" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.AdvertisementId)">ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.AdTitle)">Title</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.TotalViews)">Views</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.TotalClicks)">Clicks</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.TotalMessagesSent)">Messages</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.ClickThroughRate)">CTR (%)</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<AnalyticsResponse, object>(x=>x.ConversionRate)">Conversion (%)</MudTableSortLabel></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.AdvertisementId</MudTd>
+                <MudTd DataLabel="Title">@context.AdTitle</MudTd>
+                <MudTd DataLabel="Views">@context.TotalViews</MudTd>
+                <MudTd DataLabel="Clicks">@context.TotalClicks</MudTd>
+                <MudTd DataLabel="Messages">@context.TotalMessagesSent</MudTd>
+                <MudTd DataLabel="CTR">
+                    <MudText Color="@GetCtrColor(context.ClickThroughRate)">@context.ClickThroughRate%</MudText>
+                </MudTd>
+                <MudTd DataLabel="Conversion">
+                    <MudText Color="@GetConversionColor(context.ConversionRate)">@context.ConversionRate%</MudText>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private bool _isLoading = true;
+    private List<AnalyticsResponse> _analytics = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _analytics = await Api.GetAnalyticsSummaryAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading analytics: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Color GetCtrColor(double ctr)
+    {
+        if (ctr >= 10) return Color.Success;
+        if (ctr >= 5) return Color.Info;
+        return Color.Default;
+    }
+
+    private Color GetConversionColor(double conv)
+    {
+        if (conv >= 20) return Color.Success;
+        if (conv >= 10) return Color.Info;
+        return Color.Default;
+    }
+}

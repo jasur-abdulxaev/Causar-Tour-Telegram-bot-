@@ -1,0 +1,192 @@
+@page "/advertisements/create"
+@page "/advertisements/edit/{Id:int}"
+@inject ApiService Api
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(IsEdit ? "Edit Advertisement" : "Create Advertisement")</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">@(IsEdit ? "Edit Advertisement" : "Create Advertisement")</MudText>
+
+@if (_isLoading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <EditForm Model="@_model" OnValidSubmit="SaveAd">
+        <DataAnnotationsValidator />
+        
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4 mb-4" Elevation="2">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Basic Info</MudText>
+                    
+                    <MudTextField @bind-Value="_model.Title" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" For="@(() => _model.Title)" />
+                    
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Custom Post Settings (Optional)</MudText>
+                    <MudTextField @bind-Value="_model.CustomText" Label="Custom Template Text (Overrides generated text)" Lines="4" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                    <MudTextField @bind-Value="_model.AdminUsername" Label="Custom Admin Username (e.g. admin123)" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+
+                    <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Standard Info</MudText>
+                    <MudTextField @bind-Value="_model.Description" Label="Description" Lines="3" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                    <MudTextField @bind-Value="_model.Direction" Label="Direction (e.g. Toshkent — Antaliya)" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                    <MudTextField @bind-Value="_model.TransportInfo" Label="Transport Info" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                    <MudDatePicker @bind-Date="_model.DepartureDate" Label="Departure Date" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                    <MudNumericField @bind-Value="_model.NightsCount" Label="Nights Count" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" Min="1" />
+                    <MudTextField @bind-Value="_model.ContactInfo" Label="Contact Info" Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" For="@(() => _model.ContactInfo)" />
+                </MudPaper>
+
+                <MudPaper Class="pa-4" Elevation="2">
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.h6">Hotels</MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddHotel">Add Hotel</MudButton>
+                    </div>
+
+                    @foreach (var hotel in _model.Hotels)
+                    {
+                        <MudGrid Class="align-center mb-2">
+                            <MudItem xs="4">
+                                <MudTextField @bind-Value="hotel.Name" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                            </MudItem>
+                            <MudItem xs="3">
+                                <MudNumericField @bind-Value="hotel.PriceUsd" Label="Price ($)" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudTextField @bind-Value="hotel.ExtraInfo" Label="Extra Info" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="1">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => RemoveHotel(hotel))" />
+                            </MudItem>
+                        </MudGrid>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Publishing</MudText>
+                    
+                    @if (IsEdit)
+                    {
+                        <MudSelect @bind-Value="_status" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4">
+                            @foreach (AdStatus status in Enum.GetValues(typeof(AdStatus)))
+                            {
+                                <MudSelectItem Value="@status">@status</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    
+                    <MudDatePicker @bind-Date="_model.ScheduledPublishTime" Label="Scheduled Publish Time" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4" />
+
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mb-2">
+                        @(IsEdit ? "Save Changes" : "Create Advertisement")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" FullWidth="true" OnClick="Cancel">Cancel</MudButton>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private bool IsEdit => Id.HasValue;
+    private bool _isLoading = false;
+
+    private CreateAdRequest _model = new();
+    private AdStatus _status = AdStatus.Draft;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit)
+        {
+            _isLoading = true;
+            try
+            {
+                var ad = await Api.GetAdAsync(Id!.Value);
+                if (ad != null)
+                {
+                    _model = new CreateAdRequest
+                    {
+                        Title = ad.Title,
+                        Description = ad.Description,
+                        Direction = ad.Direction,
+                        TransportInfo = ad.TransportInfo,
+                        DepartureDate = ad.DepartureDate,
+                        NightsCount = ad.NightsCount,
+                        ContactInfo = ad.ContactInfo,
+                        CustomText = ad.CustomText,
+                        AdminUsername = ad.AdminUsername,
+                        ScheduledPublishTime = ad.ScheduledPublishTime,
+                        Hotels = ad.Hotels
+                    };
+                    _status = ad.Status;
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error loading ad: {ex.Message}", Severity.Error);
+                NavigationManager.NavigateTo("/advertisements");
+            }
+            finally
+            {
+                _isLoading = false;
+            }
+        }
+    }
+
+    private void AddHotel()
+    {
+        _model.Hotels.Add(new HotelDto());
+    }
+
+    private void RemoveHotel(HotelDto hotel)
+    {
+        _model.Hotels.Remove(hotel);
+    }
+
+    private async Task SaveAd()
+    {
+        try
+        {
+            if (IsEdit)
+            {
+                var updateRequest = new UpdateAdRequest
+                {
+                    Title = _model.Title,
+                    Description = _model.Description,
+                    Direction = _model.Direction,
+                    TransportInfo = _model.TransportInfo,
+                    DepartureDate = _model.DepartureDate,
+                    NightsCount = _model.NightsCount,
+                    ContactInfo = _model.ContactInfo,
+                    CustomText = _model.CustomText,
+                    AdminUsername = _model.AdminUsername,
+                    ScheduledPublishTime = _model.ScheduledPublishTime,
+                    Status = _status,
+                    Hotels = _model.Hotels
+                };
+                await Api.UpdateAdAsync(Id!.Value, updateRequest);
+                Snackbar.Add("Advertisement updated", Severity.Success);
+            }
+            else
+            {
+                // Default AdminId (in real app, get from auth context)
+                _model.CreatedByAdminId = 123456789; 
+                await Api.CreateAdAsync(_model);
+                Snackbar.Add("Advertisement created", Severity.Success);
+            }
+            NavigationManager.NavigateTo("/advertisements");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving ad: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/advertisements");
+    }
+}

@@ -1,0 +1,29 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+
+## SQLite databases
+*.db
+*.db-wal
+*.db-shm
+
+## Secrets (never commit real tokens!)
+appsettings.Development.json
+appsettings.Production.json
+**/secrets.json
+
+## Build output
+out/
+publish/
+
+## Logs
+logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db

@@ -45,7 +45,7 @@ public static class MessageFormatterService
             sb.AppendLine("🏨 <b>Mehmonxonalar va narxlar:</b>");
             foreach (var h in ad.Hotels)
             {
-                var hotelLine = $"• {h.Name} — <b>{h.PriceUsd}$</b>";
+                var hotelLine = $"• {System.Net.WebUtility.HtmlEncode(h.Name)} — <b>{h.PriceUsd}$</b>";
                 if (!string.IsNullOrEmpty(h.ExtraInfo)) hotelLine += $" (<i>{System.Net.WebUtility.HtmlEncode(h.ExtraInfo)}</i>)";
                 sb.AppendLine(hotelLine);
             }
